@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  backend:
+    image: ${BACKEND_IMAGE:-nexavoxa/testapp-backend:staging}
+    environment:
+      ENVIRONMENT: staging
+      DEBUG: "true"
+    ports:
+      - "8001:8000"
+    networks:
+      - testapp_staging_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      replicas: 1
+      update_config:
+        parallelism: 1
+        delay: 5s
+
+  frontend:
+    image: ${FRONTEND_IMAGE:-nexavoxa/testapp-frontend:staging}
+    environment:
+      NEXT_PUBLIC_API_URL: http://backend:8000
+    depends_on:
+      - backend
+    ports:
+      - "3001:3000"
+    networks:
+      - testapp_staging_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      replicas: 1
+      update_config:
+        parallelism: 1
+        delay: 5s
+
+networks:
+  testapp_staging_network:
+    driver: overlay

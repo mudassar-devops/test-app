@@ -1,0 +1,82 @@
+## Test App - Komodo Builds Configuration
+
+[[build]]
+name = "testapp-frontend"
+description = "Build and push Test App Next.js frontend image to Docker Hub"
+tags = ["testapp", "production", "frontend", "dockerhub"]
+[build.config]
+builder = "vm-manager"
+image_name = "testapp-frontend"
+include_version_tags = false
+linked_repo = "test-app"
+branch = "master"
+webhook_enabled = true
+build_path = "frontend"
+dockerfile_path = "Dockerfile"
+image_registry = [
+  { domain = "docker.io", account = "nexavoxa", organization = "nexavoxa" }
+]
+
+##
+
+[[build]]
+name = "testapp-backend"
+description = "Build and push Test App FastAPI backend image to Docker Hub"
+tags = ["testapp", "production", "api", "dockerhub"]
+[build.config]
+builder = "vm-manager"
+image_name = "testapp-backend"
+include_version_tags = false
+linked_repo = "test-app"
+branch = "master"
+webhook_enabled = true
+build_path = "backend"
+dockerfile_path = "Dockerfile"
+image_registry = [
+  { domain = "docker.io", account = "nexavoxa", organization = "nexavoxa" }
+]
+
+##
+
+[[stack]]
+name = "testapp-production"
+description = "Test App production - Frontend, FastAPI Backend on Docker Swarm"
+tags = ["testapp", "production", "frontend", "api", "swarm"]
+[stack.config]
+swarm = "swarm-cluster"
+project_name = "testapp"
+linked_repo = "test-app"
+run_directory = "."
+file_paths = ["swarm/prod/compose.yml"]
+config_files = [
+  { path = "swarm/prod/prod.env", requires = "Redeploy" }
+]
+registry_provider = "docker.io"
+registry_account = "nexavoxa"
+environment = """
+BACKEND_IMAGE=nexavoxa/testapp-backend:latest
+FRONTEND_IMAGE=nexavoxa/testapp-frontend:latest
+ENVIRONMENT=production
+"""
+
+##
+
+[[procedure]]
+name = "testapp_production_deploy"
+description = "Build Test App images and deploy to production swarm"
+tags = ["testapp", "production", "build", "deploy"]
+
+[[procedure.config.stage]]
+name = "Build And Push Images"
+enabled = true
+executions = [
+  { execution.type = "RunBuild", execution.params.build = "testapp-frontend", enabled = true },
+  { execution.type = "RunBuild", execution.params.build = "testapp-backend", enabled = true }
+]
+
+[[procedure.config.stage]]
+name = "Deploy To Swarm"
+enabled = true
+executions = [
+  { execution.type = "DeployStack", execution.params.stack = "testapp-production", execution.params.services = [], enabled = true }
+]
